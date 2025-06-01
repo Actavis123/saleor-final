@@ -1,8 +1,7 @@
-version: "3.4"
-
 services:
   api:
-    image: ghcr.io/saleor/saleor:3.21
+    build:
+      context: .\saleor
     ports:
       - 8000:8000
     restart: unless-stopped
@@ -73,9 +72,9 @@ services:
   jaeger:
     image: jaegertracing/jaeger
     ports:
-      - "16686:16686"
-      - "4317:4317"
-      - "4318:4318"
+      - "16686:16686"   # UI
+      - "4317:4317"     # gRPC collector
+      - "4318:4318"     # HTTP collector
     restart: unless-stopped
     networks:
       - saleor-backend-tier
@@ -91,8 +90,83 @@ services:
     restart: unless-stopped
     networks:
       - saleor-backend-tier
+  
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - saleor-backend-tier
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - saleor-backend-tier
+
+  node_exporter:
+    image: prom/node-exporter
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+    networks:
+      - saleor-backend-tier
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: postgres://saleor:saleor@db:5432/saleor?sslmode=disable
+    ports:
+      - 9187:9187
+    networks:
+      - saleor-backend-tier
+
+  redis_exporter:
+    image: oliver006/redis_exporter
+    ports:
+      - "9121:9121"
+    networks:
+      - saleor-backend-tier
+    environment:
+      REDIS_ADDR: redis://redis:6379
+
+  celery-exporter:
+    image: danihodovic/celery-exporter:latest
+    restart: unless-stopped
+    networks:
+      - saleor-backend-tier
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    command: --broker-url redis://redis:6379/0
+    ports:
+      - 9808:9808
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
+    networks:
+      - saleor-backend-tier
 
 volumes:
+  grafana-data:
   saleor-db:
     driver: local
   saleor-redis:

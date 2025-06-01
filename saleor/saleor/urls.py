@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.views import serve
-from django.urls import re_path
+from django.urls import re_path, path, include
 from django.views.decorators.csrf import csrf_exempt
 
 from .core.views import jwks
@@ -16,6 +16,7 @@ from .product.views import digital_product
 from .thumbnail.views import handle_thumbnail
 
 urlpatterns = [
+    path('', include('django_prometheus.urls')),
     re_path(
         r"^graphql/$",
         csrf_exempt(GraphQLView.as_view(backend=backend, schema=schema)),
