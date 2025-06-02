@@ -152,19 +152,6 @@ services:
     ports:
       - 9808:9808
 
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.2
-    ports:
-      - "8080:8080"
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    restart: unless-stopped
-    networks:
-      - saleor-backend-tier
-
 volumes:
   grafana-data:
   saleor-db:
